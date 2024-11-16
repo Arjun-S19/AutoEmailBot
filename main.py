@@ -55,23 +55,6 @@ async def send_emails(ctx):
         return
     email_password = password_msg.content
 
-    # dual use case; pure email list or campaign sheet
-    await ctx.send("Do you want to upload a CSV with pure emails or a campaign sheet? Reply with 'pure' or 'campaign'")
-    if stop_requested:
-        return
-
-    def check_message(message):
-        return message.author == ctx.author and message.content.lower() in ['pure', 'campaign']
-
-    try:
-        type_msg = await bot.wait_for('message', check = check_message, timeout = 10.0)
-    except asyncio.TimeoutError:
-        await ctx.send("Timed out waiting for your response, run the command again")
-        return
-    if stop_requested:
-        return
-    csv_type = type_msg.content.lower()
-
     # user csv upload
     await ctx.send("Upload the CSV file containing the email addresses")
     if stop_requested:
@@ -93,35 +76,17 @@ async def send_emails(ctx):
     await attachment.save(attachment.filename)
     
     email_addresses = []
-    if csv_type == 'pure':
-        try:
-            df = pd.read_csv(attachment.filename, header = None)
-            # case 1: no header row
-            if "@" not in str(df.iloc[0, 0]):
-                email_addresses = df.iloc[1:, 0].dropna().tolist()
-            # case 2: has header row
-            else:
-                email_addresses = df.iloc[:, 0].dropna().tolist()
-        except pd.errors.ParserError:
-            df = pd.read_csv(attachment.filename, header = None)
+    try:
+        df = pd.read_csv(attachment.filename, header = None)
+        # case 1: no header row
+        if "@" not in str(df.iloc[0, 0]):
+            email_addresses = df.iloc[1:, 0].dropna().tolist()
+        # case 2: has header row
+        else:
             email_addresses = df.iloc[:, 0].dropna().tolist()
-    elif csv_type == 'campaign':
-        try:
-            df = pd.read_csv(attachment.filename)
-            # identifying email column
-            email_column = None
-            for col in df.columns:
-                if "@" in str(df[col].dropna().iloc[0]):
-                    email_column = col
-                    break
-            if email_column:
-                email_addresses = df[email_column].dropna().tolist()
-            else:
-                await ctx.send("Could not find a column with valid email addresses")
-                return
-        except pd.errors.ParserError:
-            await ctx.send("Error parsing the CSV file, check the format and try again")
-            return
+    except pd.errors.ParserError:
+        await ctx.send("Error parsing the CSV file, check the format and try again")
+        return
 
     # validate email addresses
     invalid_emails = []
