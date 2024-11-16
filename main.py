@@ -31,11 +31,11 @@ async def send_emails(ctx):
     stop_requested = False
 
     # ask for email and password for the sender account
-    await ctx.send("Enter the email address you want to use to send the emails:")
+    await ctx.send("Enter the sender email address:")
     if stop_requested:
         return
     try:
-        email_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 10.0)
+        email_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 20.0)
     except asyncio.TimeoutError:
         await ctx.send("Timed out waiting for your response, run the command again")
         return
@@ -43,11 +43,12 @@ async def send_emails(ctx):
         return
     email_address = email_msg.content
 
-    await ctx.send("Enter the password for the email address:")
+    await ctx.send("Enter the password:")
     if stop_requested:
         return
     try:
-        password_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 10.0)
+        password_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 20.0)
+        await password_msg.delete()
     except asyncio.TimeoutError:
         await ctx.send("Timed out waiting for your response, run the command again")
         return
@@ -64,7 +65,7 @@ async def send_emails(ctx):
         return message.author == ctx.author and len(message.attachments) > 0
 
     try:
-        message = await bot.wait_for('message', check = check_file, timeout = 10.0)
+        message = await bot.wait_for('message', check = check_file, timeout = 20.0)
     except asyncio.TimeoutError:
         await ctx.send("Timed out waiting for your response, run the command again")
         return
@@ -74,6 +75,7 @@ async def send_emails(ctx):
     
     # csv download to server
     await attachment.save(attachment.filename)
+    file_path = attachment.filename
     
     email_addresses = []
     try:
@@ -105,7 +107,7 @@ async def send_emails(ctx):
     if stop_requested:
         return
     try:
-        subject_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 10.0)
+        subject_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 20.0)
     except asyncio.TimeoutError:
         await ctx.send("Timed out waiting for your response, run the command again")
         return
@@ -114,11 +116,11 @@ async def send_emails(ctx):
     subject = subject_msg.content
 
     # ask for and extract email body
-    await ctx.send("Enter the body of the email:")
+    await ctx.send("Enter the body of the email: (use **bold** for bold text)")
     if stop_requested:
         return
     try:
-        body_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 10.0)
+        body_msg = await bot.wait_for('message', check = lambda m: m.author == ctx.author, timeout = 20.0)
     except asyncio.TimeoutError:
         await ctx.send("Timed out waiting for your response, run the command again")
         return
@@ -126,31 +128,50 @@ async def send_emails(ctx):
         return
     body = body_msg.content
 
+    # format body to allow for bold, links, and line breaks
+    body_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', body)
+    body_html = body_html.replace('\n', '<br>')  # Replace line breaks with <br> to retain spacing
+
     # sending emails yipeeee!!!
     sent_count = 0
+    loading_message = await ctx.send("Sending emails.")
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
         server.starttls()
         server.login(email_address, email_password)
 
-        for email in email_addresses:
-            # 5 sec delay in between emails to avoid being flagged as spam
-            if stop_requested:
-                return
-            await asyncio.sleep(5)
-            msg = MIMEMultipart()
-            msg['From'] = email_address
-            msg['To'] = email
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'plain'))
-            server.send_message(msg)
-            sent_count += 1
+        while sent_count < total_emails:
+            for email in email_addresses:
+                if stop_requested:
+                    return
+                msg = MIMEMultipart()
+                msg['From'] = email_address
+                msg['To'] = email
+                msg['Subject'] = subject
+                msg.attach(MIMEText(body_html, 'html'))
+                server.send_message(msg)
+                sent_count += 1
+                # 5 sec delay between emails to avoid being flagged as spam
+                await asyncio.sleep(5)
 
-    await ctx.send(f"Emails successfully sent to {sent_count} of {total_emails} recipients!")
-    
-    # output invalid emails if any
+    await loading_message.delete()
+
+    # summary output
+    summary_message = (
+        f"Summary:\n"
+        f"- Email address used: {email_address}\n"
+        f"- Emails sent: {sent_count} of {total_emails}\n"
+    )
     if invalid_emails:
-        await ctx.send(f"The following email addresses were invalid and skipped: {', '.join(invalid_emails)}")
+        summary_message += f"- Invalid emails skipped: {', '.join(invalid_emails)}\n"
+    await ctx.send(summary_message)
 
+    # delete the csv file from server
+    try:
+        import os
+        os.remove(file_path)
+    except Exception as e:
+        await ctx.send(f"Failed to delete the CSV file: {str(e)}")
+    
 @bot.command(name = 'stop')
 async def stop(ctx):
     global stop_requested
