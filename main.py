@@ -130,11 +130,11 @@ async def send_emails(ctx):
 
     # format body to allow for bold, links, and line breaks
     body_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', body)
-    body_html = body_html.replace('\n', '<br>')  # Replace line breaks with <br> to retain spacing
+    body_html = body_html.replace('\n', '<br>')
 
     # sending emails yipeeee!!!
     sent_count = 0
-    loading_message = await ctx.send("Sending emails.")
+    loading_message = await ctx.send("Sending emails...")
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
         server.starttls()
         server.login(email_address, email_password)
