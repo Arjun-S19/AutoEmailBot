@@ -78,14 +78,11 @@ async def send_emails(ctx):
     file_path = attachment.filename
     
     email_addresses = []
+    usernames = []
     try:
         df = pd.read_csv(attachment.filename, header = None)
-        # case 1: no header row
-        if "@" not in str(df.iloc[0, 0]):
-            email_addresses = df.iloc[1:, 0].dropna().tolist()
-        # case 2: has header row
-        else:
-            email_addresses = df.iloc[:, 0].dropna().tolist()
+        usernames = df.iloc[:, 0].dropna().tolist()
+        email_addresses = df.iloc[:, 1].dropna().tolist()
     except pd.errors.ParserError:
         await ctx.send("Error parsing the CSV file, check the format and try again")
         return
@@ -93,13 +90,16 @@ async def send_emails(ctx):
     # validate email addresses
     invalid_emails = []
     valid_email_addresses = []
-    for email in email_addresses:
+    valid_usernames = []
+    for username, email in zip(usernames, email_addresses):
         if re.match(r'^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$', email):
             valid_email_addresses.append(email)
+            valid_usernames.append(username)
         else:
             invalid_emails.append(email)
 
     email_addresses = valid_email_addresses
+    usernames = valid_usernames
     total_emails = len(email_addresses)
 
     # ask for and extract email subject
@@ -128,30 +128,30 @@ async def send_emails(ctx):
         return
     body = body_msg.content
 
-    # format body to allow for bold, links, and line breaks
+    # format body to allow for bold and line breaks
     body_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', body)
-    body_html = body_html.replace('\n', '<br>')  # Replace line breaks with <br> to retain spacing
+    body_html = body_html.replace('\n', '<br>')
 
     # sending emails yipeeee!!!
     sent_count = 0
-    loading_message = await ctx.send("Sending emails.")
+    loading_message = await ctx.send("Sending emails...")
     with smtplib.SMTP('smtp.gmail.com', 587) as server:
         server.starttls()
         server.login(email_address, email_password)
 
         while sent_count < total_emails:
-            for email in email_addresses:
+            for username, email in zip(usernames, email_addresses):
                 if stop_requested:
                     return
                 msg = MIMEMultipart()
                 msg['From'] = email_address
                 msg['To'] = email
-                msg['Subject'] = subject
+                msg['Subject'] = f"{subject} [@{username}]"
                 msg.attach(MIMEText(body_html, 'html'))
                 server.send_message(msg)
                 sent_count += 1
                 # 5 sec delay between emails to avoid being flagged as spam
-                await asyncio.sleep(5)
+                await asyncio.sleep(10)
 
     await loading_message.delete()
 
