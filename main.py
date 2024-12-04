@@ -65,7 +65,7 @@ EMAIL_SIGNATURES = {
 <span style = "color: #ababab;">John Smith | Marketing Manager</span><br>
 <span style = "color: #ababab;">Example Corp</span><br>
 <a href = "https://www.example.com" style = "color: #002cee;">https://www.example.com</a><br>
-<img src = "cid:example_logo" alt = "Example Logo" width = "150">
+<img src = "link:example_logo" alt = "Example-Logo" width = "150">
 """,
     "email2@gmail.com": """
 <br>
@@ -73,7 +73,7 @@ EMAIL_SIGNATURES = {
 <span style = "color: #ababab;">Jane Doe | Marketing Manager</span><br>
 <span style = "color: #ababab;">Example Corp</span><br>
 <a href = "https://www.example.com" style = "color: #002cee;">https://www.example.com</a><br>
-<img src = "cid:example_logo" alt = "Example Logo" width = "150">
+<img src = "link:example_logo" alt = "Example-Logo" width = "150">
 """,
 }
 
