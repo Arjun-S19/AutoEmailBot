@@ -2,7 +2,7 @@
 # **AutoEmailBot**
 
 ### What is AutoEmailBot?
-AutoEmailBot is a Discord bot designed to automate outreach emails for OVG! Media. The bot sends outreach emails to social media content creators, inviting them to collaborate with OVG! Media for paid song promotions and creative partnerships. It is an internal tool that streamlines communication efforts.
+AutoEmailBot is a Discord bot designed to automate outreach emails for [OVG! Media](https://www.ovgmedia.com/). The bot sends outreach emails to social media content creators, inviting them to collaborate with OVG! Media for paid song promotions and creative partnerships. It is an internal tool that streamlines communication efforts.
 
 ### How does AutoEmailBot work?
 AutoEmailBot takes in a CSV file with two columns: one for usernames and the other for email addresses. Using this information, it personalizes and sends outreach emails to the respective content creators. The bot uses various features to make this process efficient, such as email validation, email confirmation, and support for different sender addresses.
