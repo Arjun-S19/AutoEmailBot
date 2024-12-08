@@ -1,104 +1,17 @@
-import discord
 from discord.ext import commands
+import discord
 import pandas as pd
+import asyncio
+import re
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import asyncio
-import re
 import os
+from config import EMAIL_PRESETS, EMAIL_SIGNATURES, stop_requested
+from bot_ui import Confirmation, EmailSelection
 
-# bot token
-DISCORD_TOKEN = "insert discord token here"
-
-# command prefix
-intents = discord.Intents.default()
-intents.messages = True
-intents.guilds = True
-intents.message_content = True
-intents.members = True
-bot = commands.Bot(command_prefix = "!", intents = intents)
-
-stop_requested = False
-
-# confirmation for emails
-class Confirmation(discord.ui.View):
-    def __init__(self, ctx, total_emails):
-        super().__init__(timeout = 60)
-        self.ctx = ctx
-        self.total_emails = total_emails
-        self.confirmed = False
-
-    # confirm button
-    @discord.ui.button(label = "Confirm", style = discord.ButtonStyle.green)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user == self.ctx.author:
-            self.confirmed = True
-            await interaction.response.send_message("Confirmed! Sending emails...", ephemeral = True)
-            self.stop()
-        else:
-            await interaction.response.send_message("Not confirmed", ephemeral = True)
-
-    # cancel button
-    @discord.ui.button(label = "Cancel", style = discord.ButtonStyle.red)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user == self.ctx.author:
-            await interaction.response.send_message("Canceled! Run the command again", ephemeral = True)
-            self.stop()
-        else:
-            await interaction.response.send_message("Not canceled", ephemeral = True)
-
-@bot.event
-async def on_ready():
-    print(f"{bot.user} is up n running chief, email away!")
-
-# preset email accounts and signatures
-EMAIL_PRESETS = {
-    "email1@gmail.com": "password1",
-    "email2@gmail.com": "password2",
-}
-
-EMAIL_SIGNATURES = {
-    "email1@gmail.com": """
-<br>
-<span style = "color: #ababab;">--</span><br>
-<span style = "color: #ababab;">John Smith | Marketing Manager</span><br>
-<span style = "color: #ababab;">Example Corp</span><br>
-<a href = "https://www.example.com" style = "color: #002cee;">https://www.example.com</a><br>
-<img src = "link:example_logo" alt = "Example-Logo" width = "150">
-""",
-    "email2@gmail.com": """
-<br>
-<span style = "color: #ababab;">--</span><br>
-<span style = "color: #ababab;">Jane Doe | Marketing Manager</span><br>
-<span style = "color: #ababab;">Example Corp</span><br>
-<a href = "https://www.example.com" style = "color: #002cee;">https://www.example.com</a><br>
-<img src = "link:example_logo" alt = "Example-Logo" width = "150">
-""",
-}
-
-# dropdown for selecting a sender email
-class EmailSelection(discord.ui.View):
-    def __init__(self, ctx):
-        super().__init__(timeout = 60)
-        self.ctx = ctx
-        self.selected_email = None
-
-    @discord.ui.select(
-        placeholder = "-",
-        options = [
-            discord.SelectOption(label = email, description = "") for email in EMAIL_PRESETS.keys()
-        ],
-    )
-    async def select_email(self, interaction: discord.Interaction, select: discord.ui.Select):
-        if interaction.user == self.ctx.author:
-            self.selected_email = select.values[0]
-            await interaction.response.send_message(f"Selected email: {self.selected_email}", ephemeral = True)
-            self.stop()
-        else:
-            await interaction.response.send_message("You are not authorized to select this email", ephemeral = True)
-
-@bot.command(name = "sendemails")
+# sendemails command
+@commands.command(name = "sendemails")
 async def send_emails(ctx):
     global stop_requested
     stop_requested = False
@@ -130,7 +43,7 @@ async def send_emails(ctx):
     embed = discord.Embed(title = "Upload the CSV file containing the usernames and email addresses", description = "", color = discord.Color.blue())
     await ctx.send(embed = embed)
     try:
-        message = await bot.wait_for("message", check = lambda m: m.author == ctx.author and len(m.attachments) > 0, timeout = 60.0)
+        message = await commands.wait_for("message", check = lambda m: m.author == ctx.author and len(m.attachments) > 0, timeout = 60.0)
         check_stop()
         attachment = message.attachments[0]
         await attachment.save(attachment.filename)
@@ -176,7 +89,7 @@ async def send_emails(ctx):
     embed = discord.Embed(title = "Enter the subject for the email", description = "", color = discord.Color.blue())
     await ctx.send(embed = embed)
     try:
-        subject_msg = await bot.wait_for("message", check = lambda m: m.author == ctx.author, timeout = 60.0)
+        subject_msg = await commands.wait_for("message", check = lambda m: m.author == ctx.author, timeout = 60.0)
         check_stop()
         subject = subject_msg.content
     except asyncio.TimeoutError:
@@ -192,7 +105,7 @@ async def send_emails(ctx):
     embed = discord.Embed(title = "Enter the body of the email (use **bold** for bold text)", description = "", color = discord.Color.blue())
     await ctx.send(embed = embed)
     try:
-        body_msg = await bot.wait_for("message", check = lambda m: m.author == ctx.author, timeout = 60.0)
+        body_msg = await commands.wait_for("message", check = lambda m: m.author == ctx.author, timeout = 60.0)
         check_stop()
         body = body_msg.content
     except asyncio.TimeoutError:
@@ -277,13 +190,3 @@ async def send_emails(ctx):
     except Exception as e:
         error_embed = discord.Embed(title = "Failed to delete the CSV file", description = f"{e}", color = discord.Color.red())
         await ctx.send(embed = error_embed)
-
-# stop command
-@bot.command(name = "stop")
-async def stop(ctx):
-    global stop_requested
-    stop_requested = True
-    embed = discord.Embed(title = "Process stopped by user", description = "", color = discord.Color.red())
-    await ctx.send(embed = embed)
-
-bot.run(DISCORD_TOKEN)

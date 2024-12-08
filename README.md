@@ -38,7 +38,7 @@ AutoEmailBot takes in a CSV file with two columns: one for usernames and the oth
 ### How to Use AutoEmailBot
 1. **Create and Invite a Discord Bot**: Create a Discord bot in the Discord Developer Portal to use to host the script, and invite the bot to a Discord server
 
-2. **Update the Code for Your Use**: Replace the placeholder in `DISCORD_TOKEN` with your bot token, and modify the `EMAIL_PRESETS` and `EMAIL_SIGNATURES` dictionaries to include your sender email credentials and signatures
+2. **Update the Code for Your Use**: In config.py, replace the placeholder `DISCORD_TOKEN` with your bot token, and modify the `EMAIL_PRESETS` and `EMAIL_SIGNATURES` dictionaries to include your sender email credentials and signatures
 	- *Note*: Regular email address passwords will not work for this script. You must create an app password to bypass two-factor authentication to ensure the bot functions properly. More information can be found [here](https://support.google.com/accounts/answer/185833?hl=en).
 
 3. **Run the Script**: Use an IDE/CDE to run the script, turning the bot on
