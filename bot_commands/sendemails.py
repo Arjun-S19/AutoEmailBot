@@ -102,7 +102,7 @@ async def send_emails(ctx):
         return
 
     # ask for and extract email body
-    embed = discord.Embed(title = "Enter the body of the email (use **bold** for bold text)", description = "", color = discord.Color.blue())
+    embed = discord.Embed(title = "Enter the body of the email", description = "Use **text** for bold text, *text* for italic text, and colorRed(text)/colorBlue(text)/etc for colored text", color = discord.Color.blue())
     await ctx.send(embed = embed)
     try:
         body_msg = await commands.wait_for("message", check = lambda m: m.author == ctx.author, timeout = 60.0)
@@ -119,8 +119,24 @@ async def send_emails(ctx):
     
     # format body to allow for bold and line breaks, add signature
     body_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', body)
+    body_html = re.sub(r'\*(.*?)\*', r'<i>\1</i>', body_html)
     body_html = body_html.replace('\n', '<br>')
     body_html += f"<br><br>{email_signature}"
+    color_mapping = {
+        "Red": "Red",
+        "Orange": "Orange",
+        "Yellow": "Yellow",
+        "Green": "Green",
+        "Blue": "Blue",
+        "Purple": "Purple",
+        "Brown": "Brown",
+        "Grey": "Grey"
+    }
+    def replace_color(match):
+        color = match.group(1)
+        return f'<span style="color:{color_mapping[color]};">{match.group(2)}</span>'
+    pattern = r'color(' + '|'.join(color_mapping.keys()) + r')\((.*?)\)'
+    body_html = re.sub(pattern, replace_color, body_html)
 
     # confirmation
     embed = discord.Embed(
