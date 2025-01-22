@@ -9,6 +9,8 @@ from email.mime.text import MIMEText
 import os
 from config import EMAIL_PRESETS, EMAIL_SIGNATURES, stop_requested
 from bot_ui import Confirmation, EmailSelection
+from html2image import Html2Image
+import concurrent.futures
 
 # sendemails command
 @commands.command(name = "sendemails")
@@ -65,6 +67,7 @@ async def send_emails(ctx):
     except pd.errors.ParserError:
         error_embed = discord.Embed(title = "CSV Parsing Error", description = "Error pasing the CSV file, make sure the first column is usernames and the second column is emails", color = discord.Color.red())
         await ctx.send(embed = error_embed)
+        os.remove(file_path)
         return
 
     # validate email addresses
@@ -95,14 +98,16 @@ async def send_emails(ctx):
     except asyncio.TimeoutError:
         timeout_embed = discord.Embed(title = "Timeout, run the command again", description = "", color = discord.Color.red())
         await ctx.send(embed = timeout_embed)
+        os.remove(file_path)
         return
     except asyncio.CancelledError:
         stop_embed = discord.Embed(title = "Process stopped by user", description = "", color = discord.Color.red())
         await ctx.send(embed = stop_embed)
+        os.remove(file_path)
         return
 
     # ask for and extract email body
-    embed = discord.Embed(title = "Enter the body of the email", description = "Use **text** for bold text, *text* for italic text, and colorRed(text)/colorBlue(text)/etc for colored text", color = discord.Color.blue())
+    embed = discord.Embed(title = "Enter the body of the email", description = "Use **text** for bold text, *text* for italic text, and red(text)/blue(text)/etc for colored text", color = discord.Color.blue())
     await ctx.send(embed = embed)
     try:
         body_msg = await commands.wait_for("message", check = lambda m: m.author == ctx.author, timeout = 60.0)
@@ -111,32 +116,44 @@ async def send_emails(ctx):
     except asyncio.TimeoutError:
         timeout_embed = discord.Embed(title = "Timeout, run the command again", description = "", color = discord.Color.red())
         await ctx.send(embed = timeout_embed)
+        os.remove(file_path)
         return
     except asyncio.CancelledError:
         stop_embed = discord.Embed(title = "Process stopped by user", description = "", color = discord.Color.red())
         await ctx.send(embed = stop_embed)
+        os.remove(file_path)
         return
     
-    # format body to allow for bold and line breaks, add signature
+    # format body to allow for bold, italic, colored text, line breaks, add signature
     body_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', body)
     body_html = re.sub(r'\*(.*?)\*', r'<i>\1</i>', body_html)
     body_html = body_html.replace('\n', '<br>')
     body_html += f"<br><br>{email_signature}"
     color_mapping = {
-        "Red": "Red",
-        "Orange": "Orange",
-        "Yellow": "Yellow",
-        "Green": "Green",
-        "Blue": "Blue",
-        "Purple": "Purple",
-        "Brown": "Brown",
-        "Grey": "Grey"
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "brown": "Brown",
+        "grey": "Grey"
     }
     def replace_color(match):
         color = match.group(1)
         return f'<span style="color:{color_mapping[color]};">{match.group(2)}</span>'
-    pattern = r'color(' + '|'.join(color_mapping.keys()) + r')\((.*?)\)'
+    pattern = r'(' + '|'.join(color_mapping.keys()) + r')\((.*?)\)'
     body_html = re.sub(pattern, replace_color, body_html)
+
+    # generating html screenshot of email body
+    hti = Html2Image(output_path='.', size=(1200, 600), browser='chrome', custom_flags=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-extensions', '--disable-gpu', '--headless'])
+    def take_screenshot():
+        hti.screenshot(html_str=body_html, save_as='email_preview.png')
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(take_screenshot)
+        future.result()
+    file = discord.File('email_preview.png', filename='email_preview.png')
+    embed.set_image(url="attachment://email_preview.png")
 
     # confirmation
     embed = discord.Embed(
@@ -148,6 +165,7 @@ async def send_emails(ctx):
     )
     view = Confirmation(ctx, total_emails)
     await ctx.send(embed = embed, view = view)
+    os.remove('email_preview.png')
 
     await view.wait()
     if not view.confirmed:
@@ -205,4 +223,5 @@ async def send_emails(ctx):
         os.remove(file_path)
     except Exception as e:
         error_embed = discord.Embed(title = "Failed to delete the CSV file", description = f"{e}", color = discord.Color.red())
+        os.remove(file_path)
         await ctx.send(embed = error_embed)
