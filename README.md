@@ -22,7 +22,13 @@ AutoEmailBot takes in a CSV file with two columns: one for usernames and the oth
 
 - **Stop Command**: The stop command (`!stop`) allows the user to cancel the process at any time
 
-- **Email Sending ETA**: During the email sending, a message will provide constant updates on the estimated time remaining
+- **Dynamic ETA**: During the email sending, a message will provide constant updates on the estimated time remaining
+
+- **HTML Email Formatting**: Users can format email bodies with bold, italic, colored text, and line breaks and the bot automatically appends the selected sender's signature
+
+- **Email Preview**: The bot generates a visual preview of the email body as an image for final confirmation
+
+- **Invalid Email Handling**: Invalid emails are skipped, and a list of these emails is included in the summary report
 
 ### Libraries Used
 - **discord.py**: Used for building the Discord bot and interacting with Discord's API to create the commands and bot GUI
@@ -35,20 +41,24 @@ AutoEmailBot takes in a CSV file with two columns: one for usernames and the oth
 
 - **asyncio**: Used for asynchronous operations, such as awaiting user input and delaying email sending
 
+- **wkhtmltoimage**: Used to generate a visual preview of the email body as an image
+
 ### How to Use AutoEmailBot
 1. **Create and Invite a Discord Bot**: Create a Discord bot in the Discord Developer Portal to use to host the script, and invite the bot to a Discord server
 
 2. **Update the Code for Your Use**: In config.py, replace the placeholder `DISCORD_TOKEN` with your bot token, and modify the `EMAIL_PRESETS` and `EMAIL_SIGNATURES` dictionaries to include your sender email credentials and signatures
-	- *Note*: Regular email address passwords will not work for this script. You must create an app password to bypass two-factor authentication to ensure the bot functions properly. More information can be found [here](https://support.google.com/accounts/answer/185833?hl=en).
+	- *Note*: Regular email address passwords will not work for this script, you must create an app password to bypass two-factor authentication to ensure the bot functions properly. More information can be found [here](https://support.google.com/accounts/answer/185833?hl=en)
 
-3. **Run the Script**: Use an IDE/CDE to run the script, turning the bot on
+3. **Install the Necessary Libraries**: The Discord Python Library and pandas can be installed by running `pip install discord.py pandas` in terminal. wkhtmltoimage will need to be installed via their website [https://wkhtmltopdf.org/](https://wkhtmltopdf.org/)
 
-4. **Run the Command**: `!sendemails` is the command to run the bot
+4. **Run the Script**: Use an IDE/CDE to run the script, turning the bot on
 
-5. **Select Sender Email**: Choose a sender email account from the preset options
+5. **Run the Command**: `!sendemails` is the command to run the bot
 
-6. **Upload CSV File**: Upload a CSV file containing usernames and email addresses
+6. **Select Sender Email**: Choose a sender email account from the preset options
 
-7. **Enter Email Subject and Body**: Provide a subject line and email body
+7. **Upload CSV File**: Upload a CSV file containing usernames and email addresses
 
-8. **Confirmation Dialog**: Confirm the emails to be sent
+8. **Enter Email Subject and Body**: Provide a subject line and email body
+
+9. **Confirmation Dialog**: Confirm the emails to be sent
